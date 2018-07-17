@@ -24,5 +24,5 @@ cp_info {
 }
 */
 type ConstantInfo interface {
-	readInfo(reader *ClassReader)
+	readInfo(reader *ContentReader)
 }

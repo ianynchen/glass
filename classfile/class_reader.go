@@ -3,8 +3,6 @@ package classfile
 import (
 	"errors"
 	"fmt"
-
-	"github.com/ianynchen/glass/util"
 )
 
 type ClassParser interface {
@@ -12,16 +10,17 @@ type ClassParser interface {
 }
 
 type ClassFileParser struct {
-	content       []byte
-	offset        uint64
+	reader        *ContentReader
 	previousError error
 }
 
-type parserFunc func(class *ClassFile, content []byte) (uint64, error)
+type parserFunc func(reader *ContentReader, class *ClassFile) error
 
 // NewParser creates a new class file reader
-func NewParser(content []byte) *ClassParser {
-	return &ClassFileParser(content, 0)
+func NewParser(content []byte) ClassParser {
+	parser := new(ClassFileParser)
+	parser.reader = NewContentReader(content)
+	return parser
 }
 
 // Parse parses content of a class file and tries to return a
@@ -37,63 +36,74 @@ func (parser *ClassFileParser) Parse() (*ClassFile, error) {
 
 func (parser *ClassFileParser) parse(parseClass parserFunc, class *ClassFile) {
 	if parser.previousError == nil {
-		offset, err := parseClass(class, parser.content[parser.offset:])
-		parser.offset += offset
+		err := parseClass(parser.reader, class)
 		parser.previousError = err
 	}
 }
 
-func parseMagic(class *ClassFile, content []byte) (uint64, error) {
-	magic, err := util.ParseUint32(content)
+func parseMagic(reader *ContentReader, class *ClassFile) error {
+	magic, err := reader.readUint32()
 
 	if err != nil {
-		return 0, err
+		return err
 	} else if magic != 0xCAFEBABE {
-		return 0, errors.New("invalid magic")
+		return errors.New("invalid magic")
 	}
-	return 4, nil
+	return nil
 }
 
-func parseVersion(class *ClassFile, content []byte) (uint64, error) {
+func parseVersion(reader *ContentReader, class *ClassFile) error {
 	var err error
-	class.minorVersion, err = util.ParseUint16(content)
+	class.minorVersion, err = reader.readUint16()
 
 	if err != nil {
-		return 0, err
+		return err
 	}
 
-	class.majorVersion, err = util.ParseUint16(content[2:])
+	class.majorVersion, err = reader.readUint16()
 
 	if err != nil {
-		return 0, err
+		return err
 	}
-	return 4, nil
+	return nil
 }
 
-func parseConstantPool(class *ClassFile, content []byte) (uint64, error) {
+func parseConstantPool(reader *ContentReader, class *ClassFile) error {
 	var offset uint64
 	offset = 2
 
-	count, err := util.ParseUint16(content)
+	count, err := reader.readUint16()
 	class.constantPool = new(ConstantPool)
 	class.constantPool.info = make([]ConstantInfo, int(count))
 
 	if err != nil {
-		return offset, err
+		return err
 	}
 
 	for i := 1; i < int(count); i++ {
-		class.constantPool.info[i] = readConstantInfo(content[offset:], class.constantPool)
+		class.constantPool.info[i], err = readConstantInfo(reader, class.constantPool)
+
+		if err != nil {
+			return err
+		}
+
 		switch class.constantPool.info[i].(type) {
 		case *ConstantLongInfo, *ConstantDoubleInfo:
 			i++
 		}
 	}
+	return nil
 }
 
-func readConstantInfo(content []byte, pool *ConstantPool) ConstantInfo {
-	tag := util.ParseUint8(content)
-	c := newConstantInfo(tag, pool)
+func readConstantInfo(reader *ContentReader, pool *ConstantPool) (ConstantInfo, error) {
+	tag, err := reader.readUint8()
+
+	if err == nil {
+		c := newConstantInfo(tag, pool)
+		c.readInfo(reader)
+		return c, nil
+	}
+	return nil, err
 }
 
 func newConstantInfo(tag uint8, cp *ConstantPool) ConstantInfo {
@@ -126,26 +136,25 @@ func newConstantInfo(tag uint8, cp *ConstantPool) ConstantInfo {
 		return &ConstantMethodHandleInfo{}
 	case CONSTANT_InvokeDynamic:
 		return &ConstantInvokeDynamicInfo{cp: cp}
-	default: // todo
-		panic(fmt.Errorf("BAD constant pool tag: %v", tag))
-		return nil
+	default:
+		return fmt.Errorf("Bad constant pool tag: %v", tag)
 	}
 }
 
-func parseClassFlags(class *ClassFile, content []byte) (uint64, error) {
+func parseClassFlags(reader *ContentReader, class *ClassFile) (uint64, error) {
 	var err error
-	class.accessFlags, err = util.ParseUint16(content)
-	return 2, err
+	class.accessFlags, err = reader.readUint16()
+	return 0, err
 }
 
-func parseThisClass(class *ClassFile, content []byte) (uint64, error) {
+func parseThisClass(reader *ContentReader, class *ClassFile, content []byte) (uint64, error) {
 	var err error
-	class.thisClass, err = util.ParseUint16(content)
-	return 2, err
+	class.thisClass, err = reader.readUint16()
+	return 0, err
 }
 
-func parseSuperClass(class *ClassFile, content []byte) (uint64, error) {
+func parseSuperClass(reader *ContentReader, class *ClassFile, content []byte) (uint64, error) {
 	var err error
-	class.superClass, err = util.ParseUint16(content)
-	return 2, err
+	class.superClass, err = reader.readUint16()
+	return 0, err
 }
