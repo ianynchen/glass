@@ -19,6 +19,9 @@ type AttributeInfo interface {
 func readAttributes(reader *ContentReader, pool *ConstantPool) ([]AttributeInfo, error) {
 	var err error
 	attributesCount, err := reader.readUint16()
+	if err != nil {
+		return nil, err
+	}
 	attributes := make([]AttributeInfo, attributesCount)
 	for i := range attributes {
 		attributes[i], err = readAttribute(reader, pool)
@@ -35,8 +38,14 @@ func readAttribute(reader *ContentReader, pool *ConstantPool) (AttributeInfo, er
 	var attrLen uint32
 	var attrName string
 	attrNameIndex, err = reader.readUint16()
+	if err != nil {
+		return nil, err
+	}
 	attrLen, err = reader.readUint32()
-	attrName, err = pool.getUtf8(attrNameIndex)
+	if err != nil {
+		return nil, err
+	}
+	attrName = pool.getUtf8(attrNameIndex)
 	attrInfo := newAttributeInfo(attrName, pool)
 	if attrInfo == nil {
 		attrInfo = &UnparsedAttribute{

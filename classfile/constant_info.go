@@ -150,6 +150,9 @@ type ConstantNameAndTypeInfo struct {
 func (info *ConstantNameAndTypeInfo) readInfo(reader *ContentReader) error {
 	var err error
 	info.nameIndex, err = reader.readUint16()
+	if err != nil {
+		return err
+	}
 	info.descriptorIndex, err = reader.readUint16()
 	return err
 }
@@ -186,10 +189,17 @@ type ConstantUtf8Info struct {
 	str string
 }
 
-func (self *ConstantUtf8Info) readInfo(reader *ContentReader) error {
+func (info *ConstantUtf8Info) readInfo(reader *ContentReader) error {
 	length, err := reader.readUint16()
+	if err != nil {
+		return err
+	}
+
 	bytes, err := reader.readBytes(int(length))
-	self.str = decodeMUTF8(bytes)
+	if err != nil {
+		return err
+	}
+	info.str = decodeMUTF8(bytes)
 	return err
 }
 

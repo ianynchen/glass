@@ -14,7 +14,7 @@ func (pool *ConstantPool) Infos() []ConstantInfo {
 func (pool *ConstantPool) getConstantInfo(index uint16) ConstantInfo {
 	info := pool.info[index]
 	if info == nil {
-		panic(fmt.Errorf("Bad constant pool index: %v!", index))
+		panic(fmt.Errorf("bad constant pool index: %v", index))
 	}
 
 	return info
@@ -57,6 +57,7 @@ func (pool *ConstantPool) read(reader *ContentReader) error {
 			i++
 		}
 	}
+	return err
 }
 
 func readConstantInfo(reader *ContentReader, pool *ConstantPool) (ConstantInfo, error) {
@@ -64,7 +65,9 @@ func readConstantInfo(reader *ContentReader, pool *ConstantPool) (ConstantInfo, 
 
 	if err == nil {
 		c := newConstantInfo(tag, pool)
-		err = c.readInfo(reader)
+		if c != nil {
+			err = c.readInfo(reader)
+		}
 		return c, err
 	}
 	return nil, err
@@ -83,15 +86,15 @@ func newConstantInfo(tag uint8, cp *ConstantPool) ConstantInfo {
 	case CONSTANT_Utf8:
 		return &ConstantUtf8Info{}
 	case CONSTANT_String:
-		return &ConstantStringInfo{cp: cp}
+		return &ConstantStringInfo{pool: cp}
 	case CONSTANT_Class:
-		return &ConstantClassInfo{cp: cp}
+		return &ConstantClassInfo{pool: cp}
 	case CONSTANT_Fieldref:
-		return &ConstantFieldrefInfo{ConstantMemberrefInfo{cp: cp}}
+		return &ConstantFieldrefInfo{ConstantMemberrefInfo{pool: cp}}
 	case CONSTANT_Methodref:
-		return &ConstantMethodrefInfo{ConstantMemberrefInfo{cp: cp}}
+		return &ConstantMethodrefInfo{ConstantMemberrefInfo{pool: cp}}
 	case CONSTANT_InterfaceMethodref:
-		return &ConstantInterfaceMethodrefInfo{ConstantMemberrefInfo{cp: cp}}
+		return &ConstantInterfaceMethodrefInfo{ConstantMemberrefInfo{pool: cp}}
 	case CONSTANT_NameAndType:
 		return &ConstantNameAndTypeInfo{}
 	case CONSTANT_MethodType:
@@ -99,8 +102,8 @@ func newConstantInfo(tag uint8, cp *ConstantPool) ConstantInfo {
 	case CONSTANT_MethodHandle:
 		return &ConstantMethodHandleInfo{}
 	case CONSTANT_InvokeDynamic:
-		return &ConstantInvokeDynamicInfo{cp: cp}
+		return &ConstantInvokeDynamicInfo{pool: cp}
 	default:
-		return fmt.Errorf("Bad constant pool tag: %v", tag)
+		return nil
 	}
 }

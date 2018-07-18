@@ -35,7 +35,7 @@ func readMembers(reader *ContentReader, pool *ConstantPool) ([]*MemberInfo, erro
 		return nil, err
 	}
 
-	members = make([]*MemberInfo, count)
+	members := make([]*MemberInfo, count)
 	for i := range members {
 		members[i] = &MemberInfo{pool: pool}
 		err = members[i].read(reader)
@@ -50,9 +50,17 @@ func readMembers(reader *ContentReader, pool *ConstantPool) ([]*MemberInfo, erro
 func (member *MemberInfo) read(reader *ContentReader) error {
 	var err error
 	member.accessFlags, err = reader.readUint16()
+	if err != nil {
+		return err
+	}
 	member.nameIndex, err = reader.readUint16()
+	if err != nil {
+		return err
+	}
 	member.descriptorIndex, err = reader.readUint16()
-	member.attributes, err = reader.readUint16()
+	if err != nil {
+		return err
+	}
 	member.attributes, err = readAttributes(reader, member.pool)
 	return err
 }

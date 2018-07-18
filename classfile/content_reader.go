@@ -13,7 +13,7 @@ type ContentReader struct {
 }
 
 func NewContentReader(content []byte) *ContentReader {
-	reader := ContentReader{content}
+	reader := ContentReader{content: content}
 	reader.length = len(content)
 	return &reader
 }
@@ -73,7 +73,7 @@ func (reader *ContentReader) readInt32() (int32, error) {
 	return int32(val), err
 }
 
-func (reader *ContentReader) readUint64() (uint32, error) {
+func (reader *ContentReader) readUint64() (uint64, error) {
 	bytes, err := reader.readBytes(8)
 	if err == nil {
 		return binary.BigEndian.Uint64(bytes), nil
