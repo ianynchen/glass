@@ -44,6 +44,22 @@ func (reader *ContentReader) readUint16() (uint16, error) {
 	return 0, err
 }
 
+func (reader *ContentReader) readUint16s() ([]uint16, error) {
+	n, err := reader.readUint16()
+
+	if err == nil {
+		s := make([]uint16, n)
+		for i := range s {
+			s[i], err = reader.readUint16()
+			if err != nil {
+				return s, err
+			}
+		}
+		return s, nil
+	}
+	return nil, err
+}
+
 func (reader *ContentReader) readUint32() (uint32, error) {
 	bytes, err := reader.readBytes(4)
 	if err == nil {
@@ -52,12 +68,22 @@ func (reader *ContentReader) readUint32() (uint32, error) {
 	return 0, err
 }
 
+func (reader *ContentReader) readInt32() (int32, error) {
+	val, err := reader.readUint32()
+	return int32(val), err
+}
+
 func (reader *ContentReader) readUint64() (uint32, error) {
 	bytes, err := reader.readBytes(8)
 	if err == nil {
 		return binary.BigEndian.Uint64(bytes), nil
 	}
 	return 0, err
+}
+
+func (reader *ContentReader) readInt64() (int64, error) {
+	val, err := reader.readUint64()
+	return int64(val), err
 }
 
 func (reader *ContentReader) readFloat() (float32, error) {
